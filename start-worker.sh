@@ -54,6 +54,7 @@ sync_private_workbench() {
     --filter='Pp /README.md' \
     --filter='Pp /.gitignore' \
     --filter='Pp /start-worker.sh' \
+    --filter='Pp /reset-worker-checkout.sh' \
     "$private_clone_dir/" "$script_dir/"
 }
 
