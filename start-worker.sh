@@ -6,7 +6,9 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 github_origin_url="${GITHUB_ORIGIN_URL:-https://github.com/StingrayDigital/cursor-my-machine}"
 private_workbench_repo_url="${PRIVATE_WORKBENCH_REPO_URL:-git@gitlab.stingray-tooling.com:frontend-html5/cursor-my-machine.git}"
 private_workbench_ref="${PRIVATE_WORKBENCH_REF:-master}"
-worker_name="${WORKER_NAME:-cursor-my-machine-github}"
+worker_name="${WORKER_NAME:-$(id -un)-cursor-my-machine}"
+
+printf 'Cursor My Machines worker name: %s\n' "$worker_name"
 
 write_section() {
   printf '\n=== %s ===\n' "$1"
@@ -49,9 +51,9 @@ sync_private_workbench() {
   write_section "Syncing workbench files into GitHub worker checkout"
   rsync -a --delete \
     --filter='P /.git/***' \
-    --filter='P /README.md' \
-    --filter='P /.gitignore' \
-    --filter='P /start-worker.sh' \
+    --filter='Pp /README.md' \
+    --filter='Pp /.gitignore' \
+    --filter='Pp /start-worker.sh' \
     "$private_clone_dir/" "$script_dir/"
 }
 
