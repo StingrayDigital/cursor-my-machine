@@ -6,9 +6,22 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 github_origin_url="${GITHUB_ORIGIN_URL:-https://github.com/StingrayDigital/cursor-my-machine}"
 private_workbench_repo_url="${PRIVATE_WORKBENCH_REPO_URL:-git@gitlab.stingray-tooling.com:frontend-html5/cursor-my-machine.git}"
 private_workbench_ref="${PRIVATE_WORKBENCH_REF:-master}"
-worker_name="${WORKER_NAME:-$(id -un)-cursor-my-machine}"
 
-printf 'Cursor My Machines worker name: %s\n' "$worker_name"
+print_usage() {
+  cat <<'USAGE'
+Usage: ./start-worker-devcontainer.sh [launcher-options]
+
+Syncs the private workbench into this GitHub checkout, disables accidental
+GitHub pushes, then starts the Cursor My Machines worker inside the repo
+devcontainer.
+
+Any launcher options are forwarded to:
+  ./start-cursor-my-machine-devcontainer.sh
+
+Environment overrides:
+  GITHUB_ORIGIN_URL, PRIVATE_WORKBENCH_REPO_URL, PRIVATE_WORKBENCH_REF
+USAGE
+}
 
 write_section() {
   printf '\n=== %s ===\n' "$1"
@@ -69,23 +82,28 @@ disable_github_push() {
   git -C "$script_dir" remote set-url --push origin DISABLED
 }
 
-start_worker() {
-  local launcher_path="$script_dir/start-cursor-my-machine.sh"
+start_devcontainer_worker() {
+  local launcher_path="$script_dir/start-cursor-my-machine-devcontainer.sh"
 
-  [[ -x "$launcher_path" ]] || fail "Synced launcher is missing or not executable: $launcher_path"
+  [[ -x "$launcher_path" ]] || fail "Synced devcontainer launcher is missing or not executable: $launcher_path"
 
-  write_section "Starting Cursor My Machines worker"
-  "$launcher_path" --workbench-path "$script_dir" --worker-name "$worker_name"
+  write_section "Starting Cursor My Machines devcontainer worker"
+  "$launcher_path" --workbench-path "$script_dir" "$@"
 }
 
 main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    print_usage
+    exit 0
+  fi
+
   require_command git
   require_command rsync
 
   verify_github_checkout
   sync_private_workbench
   disable_github_push
-  start_worker
+  start_devcontainer_worker "$@"
 }
 
 main "$@"
