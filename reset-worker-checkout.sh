@@ -15,13 +15,18 @@ fail() {
   exit 1
 }
 
+normalize_git_url() {
+  local url="$1"
+  printf '%s\n' "${url%.git}"
+}
+
 verify_github_checkout() {
   local actual_origin_url
 
   [[ -d "$script_dir/.git" ]] || fail "Run this script from the GitHub worker checkout."
 
   actual_origin_url="$(git -C "$script_dir" remote get-url origin)"
-  [[ "$actual_origin_url" == "$github_origin_url" ]] || fail "Unexpected origin '$actual_origin_url'. Expected '$github_origin_url'."
+  [[ "$(normalize_git_url "$actual_origin_url")" == "$(normalize_git_url "$github_origin_url")" ]] || fail "Unexpected origin '$actual_origin_url'. Expected '$github_origin_url'."
 }
 
 main() {
