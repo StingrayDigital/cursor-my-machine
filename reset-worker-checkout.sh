@@ -33,32 +33,31 @@ verify_github_checkout() {
   [[ "$(normalize_git_url "$actual_origin_url")" == "$(normalize_git_url "$github_origin_url")" ]] || fail "Unexpected origin '$actual_origin_url'. Expected '$github_origin_url'."
 }
 
-remove_generated_artifacts() {
-  local generated_path
-  local user_group
+remove_local_files() {
+  if git -C "$script_dir" clean -ffdx >/dev/null 2>&1; then
+    return
+  fi
 
-  user_group="$(id -gn)"
+  warn "Normal git clean could not remove every local file; retrying with WSL root."
 
-  for generated_path in "$script_dir/.agent-workspaces" "$script_dir/.playwright-mcp"; do
-    [[ -e "$generated_path" ]] || continue
+  if clean_checkout_as_wsl_root; then
+    return
+  fi
 
-    chown -R "$USER:$user_group" "$generated_path" 2>/dev/null || true
-    if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
-      sudo -n chown -R "$USER:$user_group" "$generated_path" 2>/dev/null || true
-    fi
+  warn "Could not remove all local files; continuing."
+}
 
-    if ! rm -rf "$generated_path" 2>/dev/null; then
-      warn "Could not remove generated artifacts at ${generated_path#"$script_dir"/}; continuing. Fix ownership with: sudo chown -R \"\$USER\":\"\$USER\" \"${generated_path#"$script_dir"/}\""
-    fi
-  done
+clean_checkout_as_wsl_root() {
+  local distro_name="${WSL_DISTRO_NAME:-}"
+
+  [[ -n "$distro_name" ]] || return 1
+  command -v wsl.exe >/dev/null 2>&1 || return 1
+
+  wsl.exe -d "$distro_name" -u root -- git -c "safe.directory=$script_dir" -C "$script_dir" clean -ffdx >/dev/null 2>&1
 }
 
 clean_checkout() {
-  remove_generated_artifacts
-
-  if ! git -C "$script_dir" clean -fdx -e .agent-workspaces/ -e .playwright-mcp/; then
-    warn "Some untracked files could not be removed; continuing."
-  fi
+  remove_local_files
 }
 
 main() {
