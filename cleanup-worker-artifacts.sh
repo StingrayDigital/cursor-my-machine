@@ -4,7 +4,6 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
 github_origin_url="${GITHUB_ORIGIN_URL:-https://github.com/StingrayDigital/cursor-my-machine}"
-github_branch="${GITHUB_BRANCH:-main}"
 
 write_section() {
   printf '\n=== %s ===\n' "$1"
@@ -33,25 +32,46 @@ verify_github_checkout() {
   [[ "$(normalize_git_url "$actual_origin_url")" == "$(normalize_git_url "$github_origin_url")" ]] || fail "Unexpected origin '$actual_origin_url'. Expected '$github_origin_url'."
 }
 
-clean_checkout() {
-  if ! git -C "$script_dir" clean -fdx -e .agent-workspaces/ -e .playwright-mcp/; then
-    warn "Some untracked files could not be removed; continuing. Run ./cleanup-worker-artifacts.sh to remove generated workspaces and artifacts."
-  fi
+cleanup_artifacts() {
+  local artifact_path
+  local artifact_paths=(
+    "$script_dir/.agent-workspaces"
+    "$script_dir/.playwright-mcp"
+  )
+
+  for artifact_path in "${artifact_paths[@]}"; do
+    [[ -e "$artifact_path" ]] || continue
+
+    if rm -rf "$artifact_path" 2>/dev/null; then
+      continue
+    fi
+
+    if remove_artifact_as_wsl_root "$artifact_path"; then
+      continue
+    fi
+
+    warn "Could not remove ${artifact_path#"$script_dir"/}; fix ownership or remove it manually."
+  done
+}
+
+remove_artifact_as_wsl_root() {
+  local artifact_path="$1"
+  local distro_name="${WSL_DISTRO_NAME:-}"
+
+  [[ -n "$distro_name" ]] || return 1
+  command -v wsl.exe >/dev/null 2>&1 || return 1
+
+  wsl.exe -d "$distro_name" -u root -- rm -rf "$artifact_path" >/dev/null 2>&1
 }
 
 main() {
   verify_github_checkout
 
-  write_section "Restoring GitHub checkout for script development"
-  git -C "$script_dir" remote set-url --push origin "$github_origin_url"
-  git -C "$script_dir" fetch origin
-  git -C "$script_dir" reset --hard "origin/$github_branch"
-  clean_checkout
+  write_section "Cleaning generated worker artifacts"
+  cleanup_artifacts
 
   write_section "Checkout status"
-  if ! git -C "$script_dir" status --short --ignored; then
-    warn "Could not read checkout status; continuing."
-  fi
+  git -C "$script_dir" status --short --ignored
 }
 
 main "$@"

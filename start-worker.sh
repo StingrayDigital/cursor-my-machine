@@ -56,11 +56,14 @@ sync_private_workbench() {
   write_section "Syncing workbench files into GitHub worker checkout"
   rsync -a --delete \
     --filter='P /.git/***' \
+    --filter='P /.agent-workspaces/***' \
+    --filter='P /.playwright-mcp/***' \
     --filter='- /README.md' \
     --filter='- /.gitignore' \
     --filter='- /start-worker.sh' \
     --filter='- /start-worker-devcontainer.sh' \
     --filter='- /reset-worker-checkout.sh' \
+    --filter='- /cleanup-worker-artifacts.sh' \
     "$private_clone_dir/" "$script_dir/"
 }
 

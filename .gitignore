@@ -4,3 +4,4 @@
 !start-worker.sh
 !start-worker-devcontainer.sh
 !reset-worker-checkout.sh
+!cleanup-worker-artifacts.sh
