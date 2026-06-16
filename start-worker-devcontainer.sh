@@ -32,6 +32,10 @@ fail() {
   exit 1
 }
 
+warn() {
+  printf 'Warning: %s\n' "$1" >&2
+}
+
 normalize_git_url() {
   local url="$1"
   printf '%s\n' "${url%.git}"
@@ -91,6 +95,35 @@ start_devcontainer_worker() {
   "$launcher_path" --workbench-path "$script_dir" "$@"
 }
 
+repair_generated_artifact_ownership() {
+  local generated_path
+  local user_group
+
+  user_group="$(id -gn)"
+
+  for generated_path in "$script_dir/.agent-workspaces" "$script_dir/.playwright-mcp"; do
+    [[ -e "$generated_path" ]] || continue
+
+    if chown -R "$USER:$user_group" "$generated_path" 2>/dev/null; then
+      continue
+    fi
+
+    if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null && sudo -n chown -R "$USER:$user_group" "$generated_path" 2>/dev/null; then
+      continue
+    fi
+
+    warn "Could not repair ownership for ${generated_path#"$script_dir"/}; continuing."
+  done
+}
+
+configure_docker_host() {
+  local rancher_desktop_socket="/mnt/wsl/rancher-desktop/run/docker.sock"
+
+  if [[ -z "${DOCKER_HOST:-}" && ! -S /var/run/docker.sock && -S "$rancher_desktop_socket" ]]; then
+    export DOCKER_HOST="unix://$rancher_desktop_socket"
+  fi
+}
+
 main() {
   if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     print_usage
@@ -99,10 +132,13 @@ main() {
 
   require_command git
   require_command rsync
+  require_command docker
 
+  configure_docker_host
   verify_github_checkout
   sync_private_workbench
   disable_github_push
+  trap repair_generated_artifact_ownership EXIT
   start_devcontainer_worker "$@"
 }
 
