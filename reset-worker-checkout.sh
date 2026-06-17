@@ -34,7 +34,7 @@ verify_github_checkout() {
 }
 
 clean_checkout() {
-  if ! git -C "$script_dir" clean -fdx -e .agent-workspaces/ -e .playwright-mcp/; then
+  if ! git -C "$script_dir" clean -fdx -e .agent-workspaces/ -e .playwright-mcp/ -e review-workspaces/; then
     warn "Some untracked files could not be removed; continuing. Run ./cleanup-worker-artifacts.sh to remove generated workspaces and artifacts."
   fi
 }

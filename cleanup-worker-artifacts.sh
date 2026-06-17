@@ -37,6 +37,7 @@ cleanup_artifacts() {
   local artifact_paths=(
     "$script_dir/.agent-workspaces"
     "$script_dir/.playwright-mcp"
+    "$script_dir/review-workspaces"
   )
 
   for artifact_path in "${artifact_paths[@]}"; do

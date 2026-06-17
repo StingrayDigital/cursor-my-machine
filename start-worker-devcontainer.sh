@@ -75,6 +75,7 @@ sync_private_workbench() {
     --filter='P /.git/***' \
     --filter='P /.agent-workspaces/***' \
     --filter='P /.playwright-mcp/***' \
+    --filter='P /review-workspaces/***' \
     --filter='- /README.md' \
     --filter='- /.gitignore' \
     --filter='- /start-worker.sh' \
